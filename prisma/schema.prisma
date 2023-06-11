@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+    provider     = "mysql"
+    url          = env("DATABASE_URL")
+    relationMode = "prisma"
+}
+
+generator client {
+    provider        = "prisma-client-js"
+    previewFeatures = ["jsonProtocol"]
+}
+
+model Account {
+    id                String  @id @default(cuid())
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String? @db.Text
+    access_token      String? @db.Text
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String? @db.Text
+    session_state     String?
+    user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([provider, providerAccountId])
+}
+
+model Permission {
+    id        String   @id @default(cuid())
+    name      String   @unique
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    userId      String
+    user        User[]
+    areaId      String
+    area        Area[]
+    Form        Form[]
+    FormSection FormSection[]
+}
+
+model Area {
+    id             String       @id @default(cuid())
+    name           String
+    createdAt      DateTime     @default(now())
+    updatedAt      DateTime     @updatedAt
+    organizationId String
+    organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+    permissions    Permission[]
+    forms          Form[]
+}
+
+model Form {
+    id            String        @id @default(cuid())
+    name          String
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+    areaId        String
+    area          Area          @relation(fields: [areaId], references: [id], onDelete: Cascade)
+    permissions   Permission[]
+    status        Status        @default(open)
+    form_sections FormSection[]
+}
+
+model FormSection {
+    id          String       @id @default(cuid())
+    name        String
+    createdAt   DateTime     @default(now())
+    updatedAt   DateTime     @updatedAt
+    status      Status       @default(open)
+    sort        Float
+    formId      String
+    form        Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+    inputs      Input[]
+    triggers    Trigger[]
+    permissions Permission[]
+}
+
+model Input {
+    id            String      @id @default(cuid())
+    name          String
+    createdAt     DateTime    @default(now())
+    updatedAt     DateTime    @updatedAt
+    sort          Float
+    formSectionId String
+    form_section  FormSection @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
+}
+
+enum Status {
+    open
+    progress
+    completed
+}
+
+enum Role {
+    user
+    admin
+}
+
+model Organization {
+    id        String   @id @default(cuid())
+    name      String   @unique
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+    users     User[]
+    areas     Area[]
+}
+
+model Session {
+    id           String   @id @default(cuid())
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+    id             String        @id @default(cuid())
+    name           String?
+    email          String?       @unique
+    emailVerified  DateTime?
+    image          String?
+    organizationId String?
+    role           Role          @default(user)
+    organization   Organization? @relation(fields: [organizationId], references: [id])
+    permissions    Permission[]
+    accounts       Account[]
+    sessions       Session[]
+}
+
+model Trigger {
+    id            String      @id @default(cuid())
+    name          String
+    createdAt     DateTime    @default(now())
+    updatedAt     DateTime    @updatedAt
+    type          Type        @default(email)
+    formSectionId String
+    form_section  FormSection @relation(fields: [formSectionId], references: [id], onDelete: Cascade)
+}
+
+enum Type {
+    email
+    code
+    create_data
+    update_data
+    delete_data
+    webhook
+}
+
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
+}

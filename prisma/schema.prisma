@@ -145,7 +145,6 @@ model Trigger {
 
 enum Type {
     email
-    code
     create_data
     update_data
     delete_data

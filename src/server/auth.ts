@@ -37,9 +37,23 @@ declare module "next-auth" {
  */
 export const authOptions: NextAuthOptions = {
   callbacks: {
-    jwt: ({ token }) => ({
-      ...token,
-    }),
+    jwt: async ({ token }) => {
+      const dbUser = await prisma.user.findFirst({
+        where: {
+          email: token.email,
+        },
+        select: {
+          id: true,
+          email: true,
+          image: true,
+          organizationId: true,
+          role: true,
+          organization: { select: { name: true } },
+        },
+      });
+      console.log(dbUser);
+      return { ...token, ...dbUser };
+    },
     session: ({ session, token }) => ({
       ...session,
       user: {
@@ -47,7 +61,7 @@ export const authOptions: NextAuthOptions = {
         id: token.sub,
         organizationId: token.organizationId,
         role: token.role,
-        organizationName: token.organizationName,
+        organization: token.organization,
       },
     }),
   },
